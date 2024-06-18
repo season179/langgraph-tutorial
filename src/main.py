@@ -15,9 +15,6 @@ from langchain_community.tools.tavily_search import TavilySearchResults
 load_dotenv(find_dotenv())
 
 
-memory = SqliteSaver.from_conn_string(":memory:")
-
-
 class State(TypedDict):
     messages: Annotated[list, add_messages]
 
@@ -47,7 +44,10 @@ graph_builder.add_conditional_edges(
 # Any time a tool is called, we return to the chatbot to decide the next step
 graph_builder.add_edge("tools", "chatbot")
 graph_builder.set_entry_point("chatbot")
-graph = graph_builder.compile(checkpointer=memory)
+
+memory = SqliteSaver.from_conn_string(":memory:")
+
+graph = graph_builder.compile(checkpointer=memory, interrupt_after=["tools"])
 
 config = { "configurable": { "thread_id": "1" } }
 
@@ -65,7 +65,22 @@ while True:
     )
 
     for event in events:
-        event["messages"][-1].pretty_print()
+        if "messages" in event:
+            event["messages"][-1].pretty_print()
+            
+            snapshot = graph.get_state(config)
+            psnapshot_next = snapshot.next
+            print(f"Snapshot: {psnapshot_next}")
+            
+            
+            if "messages" in snapshot.values and snapshot.values["messages"]:
+                existing_message = snapshot.values["messages"][-1]
+                print(f"existing message: {existing_message}")
+                if hasattr(existing_message, 'tool_calls'):
+                    existing_message.tool_calls
+        
+        
+        
         # for value in event.values():
         #     if isinstance(value["messages"][-1], BaseMessage):
         #         print("Assistant:", value["messages"][-1].content)
