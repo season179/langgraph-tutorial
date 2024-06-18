@@ -1,15 +1,21 @@
-from dotenv import load_dotenv, find_dotenv
 from typing import Annotated
 from typing_extensions import TypedDict
+from dotenv import load_dotenv, find_dotenv
+
 from langgraph.graph import StateGraph
 from langgraph.graph.message import add_messages
-from langchain_core.messages import BaseMessage
-from langchain_anthropic import ChatAnthropic
-from langchain_community.tools.tavily_search import TavilySearchResults
+from langgraph.checkpoint.sqlite import SqliteSaver
 from langgraph.prebuilt import ToolNode, tools_condition
+
+from langchain_anthropic import ChatAnthropic
+from langchain_core.messages import BaseMessage
+from langchain_community.tools.tavily_search import TavilySearchResults
 
 
 load_dotenv(find_dotenv())
+
+
+memory = SqliteSaver.from_conn_string(":memory:")
 
 
 class State(TypedDict):
@@ -41,7 +47,9 @@ graph_builder.add_conditional_edges(
 # Any time a tool is called, we return to the chatbot to decide the next step
 graph_builder.add_edge("tools", "chatbot")
 graph_builder.set_entry_point("chatbot")
-graph = graph_builder.compile()
+graph = graph_builder.compile(checkpointer=memory)
+
+config = { "configurable": { "thread_id": "1" } }
 
 while True:
     user_input = input("User: ")
@@ -49,8 +57,15 @@ while True:
     if user_input.lower() in ["quit", "exit", "q"]:
         print("Goodbye!")
         break
+    
+    events = graph.stream(
+        { "messages": [("user", user_input)] },
+        config=config,
+        stream_mode="values"
+    )
 
-    for event in graph.stream({"messages": [("user", user_input)]}):
-        for value in event.values():
-            if isinstance(value["messages"][-1], BaseMessage):
-                print("Assistant:", value["messages"][-1].content)
+    for event in events:
+        event["messages"][-1].pretty_print()
+        # for value in event.values():
+        #     if isinstance(value["messages"][-1], BaseMessage):
+        #         print("Assistant:", value["messages"][-1].content)
