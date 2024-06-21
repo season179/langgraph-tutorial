@@ -1,0 +1,20 @@
+[tool.poetry]
+name = "langgraph-tutorial"
+version = "0.1.0"
+description = ""
+authors = ["Season Saw <season.saw@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "~3.11"
+nanoid = "^2.0.0"
+langgraph = "^0.0.69"
+langsmith = "^0.1.81"
+langchain-anthropic = "^0.1.15"
+python-dotenv = "^1.0.1"
+langchain-openai = "^0.1.8"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
