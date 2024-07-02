@@ -57,13 +57,8 @@ if user_input and user_input.strip():
 
     with st.chat_message("User"):
         st.write(user_input)
-
-    for event in graph.stream({"messages": ("user", user_input)}):
-        last_message = event["chatbot"]["messages"][-1].content
-
-        with st.chat_message("Assistant"):
-            st.write(last_message)
-
-    st.session_state.messages.append({"role": "assistant", "content": last_message})
+        
+    with st.chat_message("Assistant"):
+        st.write_stream(graph.stream({"messages": ("user", user_input)}, stream_mode="debug"))
 else:
     st.write("No input provided")
